@@ -1,4 +1,4 @@
-# Faster and Smarter Unloader for Mindustry
+# Faster and Smarter Unloader
 
 A mod that makes Unloaders significantly faster and much smarter.
 
