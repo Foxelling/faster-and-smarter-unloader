@@ -2,82 +2,83 @@
 
 Blocks.unloader.speed = 60 / 180;
 
+let fastItems = [];
+Events.on(EventType.ClientLoadEvent, cons(e => {
+    let seq = Vars.content.items();
+    for(let i = 0; i < seq.size; i++) {
+        fastItems.push(seq.get(i));
+    }
+}));
+
 Blocks.unloader.buildType = () => extend(Unloader.UnloaderBuild, Blocks.unloader, {
     updateTile() {
         this.unloadTimer += this.delta();
         
+        let pSize = this.proximity.size;
+
+        if (pSize < 2) {
+            this.unloadTimer = 0;
+            return;
+        }
+        
         while (this.unloadTimer >= this.block.speed) {
-            
-            let item = this.sortItem;
             let transferred = false;
+            let filter = this.sortItem;
             
-            let getValidPairs = (checkItem) => {
-                let sources = [];
-                let targets = [];
-                let pairs = [];
+            if (this._rot == null) this._rot = 0;
+            this._rot++;
 
-                for (let i = 0; i < this.proximity.size; i++) {
-                    let other = this.proximity.get(i);
-                    if (!other.interactable(this.team)) continue;
+            searchLoop:
+            for (let i = 0; i < pSize; i++) {
+                let source = this.proximity.get((i + this._rot) % pSize);
+                
+                if (source.items == null || !source.block.unloadable || !source.interactable(this.team)) continue;
 
-                    // Поиск источника
-                    if (other.items != null && other.items.get(checkItem) > 0) {
-                        if (other.block.unloadable && !other.block.consumesItem(checkItem)) {
-                            sources.push(other);
+                if (source.items.total() === 0) continue;
+
+                if (filter != null) {
+                    if (source.items.get(filter) > 0 && !source.block.consumesItem(filter)) {
+                        for (let j = 0; j < pSize; j++) {
+                            if (i === j) continue;
+                            let target = this.proximity.get((j + this._rot) % pSize);
+                            
+                            if (!target.interactable(this.team)) continue;
+                            
+                            if (target.block instanceof CoreBlock) continue;
+                            if (source.block instanceof StorageBlock && target.block instanceof StorageBlock) continue;
+                            if (source.block.group === BlockGroup.transportation && target.block instanceof StorageBlock) continue;
+
+                            if (target.acceptItem(this, filter)) {
+                                source.removeStack(filter, 1);
+                                target.handleItem(this, filter);
+                                transferred = true;
+                                break searchLoop;
+                            }
                         }
                     }
-
-                    // Поиск приемника
-                    if (other.acceptItem(this, checkItem) && !(other.block instanceof CoreBlock)) {
-                        targets.push(other);
-                    }
-                }
-
-                for (let s of sources) {
-                    for (let t of targets) {
-                        if (s == t) continue;
+                } else {
+                    for (let k = 0; k < fastItems.length; k++) {
+                        let item = fastItems[k];
                         
-                        // Запрет "Склад -> Склад"
-                        if (s.block instanceof StorageBlock && t.block instanceof StorageBlock) continue;
-                        
-                        // КЛЮЧЕВОЙ ФИКС: Запрет "Транспорт -> Склад"
-                        // Блокирует бесконечный цикл забора предметов обратно с пластаниевых конвейеров
-                        if (s.block.group == BlockGroup.transportation && t.block instanceof StorageBlock) continue;
-                        
-                        pairs.push({ source: s, target: t });
-                    }
-                }
-                return pairs;
-            };
+                        if (source.items.get(item) > 0 && !source.block.consumesItem(item)) {
+                            for (let j = 0; j < pSize; j++) {
+                                if (i === j) continue;
+                                let target = this.proximity.get((j + this._rot) % pSize);
+                                
+                                if (!target.interactable(this.team)) continue;
+                                
+                                if (target.block instanceof CoreBlock) continue;
+                                if (source.block instanceof StorageBlock && target.block instanceof StorageBlock) continue;
+                                if (source.block.group === BlockGroup.transportation && target.block instanceof StorageBlock) continue;
 
-            let tryTransfer = (checkItem) => {
-                let validPairs = getValidPairs(checkItem);
-                if (validPairs.length > 0) {
-                    if (this._rr == null) this._rr = 0;
-                    this._rr++;
-                    let pair = validPairs[this._rr % validPairs.length];
-                    
-                    pair.source.removeStack(checkItem, 1);
-                    pair.target.handleItem(this, checkItem);
-                    
-                    return true;
-                }
-                return false;
-            };
-
-            if (item != null) {
-                transferred = tryTransfer(item);
-            } else {
-                if (this._nullIndex == null) this._nullIndex = 0;
-                let itemsArray = Vars.content.items().toArray();
-                
-                for (let n = 0; n < itemsArray.length; n++) {
-                    let testItem = itemsArray[(this._nullIndex + n) % itemsArray.length];
-                    
-                    if (tryTransfer(testItem)) {
-                        transferred = true;
-                        this._nullIndex = (this._nullIndex + n + 1) % itemsArray.length;
-                        break; 
+                                if (target.acceptItem(this, item)) {
+                                    source.removeStack(item, 1);
+                                    target.handleItem(this, item);
+                                    transferred = true;
+                                    break searchLoop;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -85,7 +86,7 @@ Blocks.unloader.buildType = () => extend(Unloader.UnloaderBuild, Blocks.unloader
             if (transferred) {
                 this.unloadTimer -= this.block.speed;
             } else {
-                this.unloadTimer = Math.min(this.unloadTimer, this.block.speed);
+                this.unloadTimer = 0;
                 break;
             }
         }

@@ -3,6 +3,6 @@ displayName: Faster and smarter unloader
 description: Makes unloaders faster (180 items/sec) and smarter. They now exclusively push raw materials into factories and pull finished products out, completely preventing infinite transfer loops.
 author: Foxel
 
-version: 1.0
+version: 1.1
 minGameVersion: 154
 repo: Foxelling/faster-and-smarter-unloader
