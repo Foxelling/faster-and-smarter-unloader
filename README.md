@@ -1,8 +1,5 @@
 # Faster and Smarter Unloader
 
-A mod that makes Unloaders significantly faster and much smarter.
+The mod makes unloaders significantly faster and smarter. Their throughput is increased to 180 items per second. Thanks to smart factory logic, unloaders no longer bounce items back and forth between storages and factories: they correctly push raw materials into the factory and exclusively pull finished products out of it. The mod prevents infinite transfer loops between storage blocks and transportation blocks, fixing item flow issues.
 
-## Features
-* **High Throughput:** Unloader speed is increased to 180 items per second.
-* **Smart Factory Logic:** Unloaders no longer bounce items back and forth between storages and factories. They correctly push raw materials *into* the factory, and exclusively pull *finished products* out.
-* **Anti-Looping:** Prevents infinite loop transfers between Storage blocks and Transportation blocks (e.g., Plastanium conveyors), fixing item flow issues.
+Some vanilla schematics might not work!!!
